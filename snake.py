@@ -11,7 +11,7 @@ import math
 import tkinter.colorchooser
 
 size = (20,20) #长*宽
-unit = 10 #单位边长
+unit = 20 #单位边长
 head = (0,0) #当前蛇头的位置
 direction = 1
 newdirection = 1
@@ -22,6 +22,10 @@ pause = False #标记游戏是否暂停
 score = 0 #分数
 dead = False #游戏是否结束
 food = (0,0) #食物所在位置
+superfoodexist = False #超级食物是否存在
+superfoodplacetime = 0
+superfoodexpired = False
+superfood = (0,0) #超级食物的位置
 body = []
 bodyobj = tkinter.Label
 args = {"bg":"cyan","relief":"solid","borderwidth":1}
@@ -31,9 +35,12 @@ root = tkinter.Tk()
 root.title("贪吃蛇")
 frame = tkinter.Canvas(root,relief="sunken",height=size[1] * unit,width=size[0] * unit)
 frame.pack()
-dot = tkinter.Label(frame,text="●",fg="red") #食物
+dot = tkinter.Label(frame,text="●",fg="red",font=("simsun",int(unit / 1.5))) #食物
+superfooddot = tkinter.Label(frame,text="★",fg="red",font=("simsun",int(unit / 1.5))) #食物
 showscore = tkinter.Label(root,text=0) #用于显示分数
 showscore.pack()
+showtime = tkinter.Label(root,text=0)
+showtime.pack()
 focuspoint = tkinter.Frame(root,takefocus=True) #用于接收玩家的键盘输入
 focuspoint.pack()
 focuspoint.focus_set() #获取焦点
@@ -51,7 +58,7 @@ def settings():
         global unit
         global interval
         if unitinput.get().isdigit():
-            if 5 <= int(unitinput.get()) <= 20:
+            if 5 <= int(unitinput.get()) <= 30:
                 unit = int(unitinput.get())
         if widthinput.get().isdigit():
             if 10 <= int(widthinput.get()) <= 100:
@@ -63,7 +70,10 @@ def settings():
         frame.delete(tkinter.ALL)
         drawnet()
         frame.configure(height=size[1] * unit,width=size[0] * unit)
-        place(dot,food)
+        superfooddot.configure(font=("simsun",int(unit / 1.5)))
+        dot.configure(font=("simsun",int(unit / 1.5)))
+        #place(dot,food)
+        mkfood()
         for i in range(len(body)):
             place(body[i],positions[i])
         interval = 2 / speedvar.get()
@@ -238,6 +248,8 @@ def loop():
     global positions
     global score
     global direction
+    global superfoodexist
+    global superfood
     while True:
         if not dead:
             positions.pop(0) #将蛇尾的坐标删除
@@ -263,12 +275,60 @@ def loop():
                 positions.insert(0,(0,0)) #当前蛇头的位置
                 body.insert(0,bodyobj(frame,args)) #将坐标和一节身体都放在队头，这样在下一次循环中，就会被马上处理
                 showscore.configure(text=score) #显示最新分数
+                if (len(body) - 3) % 6 == 0 and not superfoodexist and not superfoodexpired:
+                    mksuperfood()
+                else:
+                    superfoodexpired = False
+            if head == superfood and superfoodexist: #超级食物
+                score += math.ceil(0.1 / interval) ** 5
+                positions.insert(0,(0,0)) #当前蛇头的位置
+                body.insert(0,bodyobj(frame,args)) #将坐标和一节身体都放在队头，这样在下一次循环中，就会被马上处理
+                showscore.configure(text=score) #显示最新分数
+                superfoodexist = False
+                
             time.sleep(interval) #等待一会儿
             direction = newdirection
             while pause: #如果游戏被暂停,则阻塞线程
                 time.sleep(0.2) #每隔2秒检查一次游戏状态
         else:
             death() #善后
+
+def dealsuperfoodtime():
+    global superfoodplacetime
+    global superfoodexist
+    global superfoodexpired
+    while True:
+        time.sleep(0.1)
+        if superfoodexist:
+            if not superfoodplacetime and not superfoodexpired:
+                superfoodplacetime = time.time()
+            else:
+                showtime.configure(text=math.ceil(6 - time.time() + superfoodplacetime))
+                if time.time() - superfoodplacetime >= 6:
+                    superfoodplacetime = 0
+                    superfoodexist = False
+                    showtime.configure(text="")
+                    superfoodexpired = True
+                    superfooddot.place_forget()
+        else:
+            superfoodexist = False
+            superfoodplacetime = 0
+            showtime.configure(text="")
+            superfooddot.place_forget()
+
+def mksuperfood():
+    global superfoodexist
+    global superfood
+    global superfoodexpired
+    superfoodexpired = False
+    superfoodexist = True
+    while True: #不停地循环，直到找到可以放置食物的地方
+        x = random.randint(0,size[0] - 1) #先随机食物的坐标
+        y = random.randint(0,size[1] - 1)
+        if (x,y) not in body: #方向，分别为上、下、左、右
+            superfood = (x,y) #那这就是个合法的坐标
+            superfooddot.place(x=x * unit + 1,y=y * unit + 1,width = unit - 2,height = unit - 2) #可以把食物放在这个地方
+            break #并结束循环
 
 def mkfood(): #用于确定食物的坐标
     global food
@@ -316,6 +376,8 @@ drawnet()
 init() #初始化
 thread = threading.Thread(target=loop) #对于游戏主循环，则需另外开一个线程，否则会卡死主界面
 thread.start() #开始游戏！
+thread = threading.Thread(target=dealsuperfoodtime) #
+thread.start() #
 
 
 
