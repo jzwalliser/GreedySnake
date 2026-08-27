@@ -45,6 +45,14 @@ focuspoint = tkinter.Frame(root,takefocus=True) #用于接收玩家的键盘输�
 focuspoint.pack()
 focuspoint.focus_set() #获取焦点
 
+def right():
+    global newdirection
+    newdirection = 2
+
+rightbutton = tkinter.ttk.Button(root,text=">",command=right)
+rightbutton.pack()
+
+
 
 def settings():
     global pause
@@ -141,7 +149,6 @@ def settings():
     
     ok = tkinter.ttk.Button(top,text="OK",command=ok)
     ok.pack(side=tkinter.RIGHT)
-
 
     
     root.wait_window()
@@ -289,7 +296,7 @@ def loop():
             time.sleep(interval) #等待一会儿
             direction = newdirection
             while pause: #如果游戏被暂停,则阻塞线程
-                time.sleep(0.2) #每隔2秒检查一次游戏状态
+                time.sleep(0.2) #每隔0.2秒检查一次游戏状态
         else:
             death() #善后
 
