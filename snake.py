@@ -78,6 +78,8 @@ focuspoint = tkinter.Frame(root,takefocus=True) #用于接收玩家的键盘输�
 focuspoint.pack()
 focuspoint.focus_set() #获取焦点
 
+stop_event = threading.Event()
+
 def right():
     global newdirection
     focuspoint.focus_set()
@@ -112,8 +114,6 @@ upbutton = tkinter.ttk.Button(virtualkeyboard,text="↑",command=up,width=3)
 upbutton.grid(row=1,column=1)
 downbutton = tkinter.ttk.Button(virtualkeyboard,text="↓",command=down,width=3)
 downbutton.grid(row=3,column=1)
-
-
 
 def settings():
     global pause
@@ -150,7 +150,6 @@ def settings():
         top.destroy()
     top.protocol("WM_DELETE_WINDOW",ok)
         
-
     speedvar = tkinter.IntVar()
     frame1 = tkinter.ttk.LabelFrame(top,text="速度")
     frame1.pack(expand=True,fill=tkinter.X)
@@ -211,7 +210,6 @@ def settings():
     ok = tkinter.ttk.Button(top,text="OK",command=ok)
     ok.pack(side=tkinter.RIGHT)
 
-    
     root.wait_window()
 
 
@@ -220,8 +218,6 @@ def drawnet():
         frame.create_line(i * unit,0,i * unit,unit * size[1],fill="#CCCCCC")
     for i in range(size[1]):
         frame.create_line(0,i * unit,unit * size[0],i * unit,fill="#CCCCCC")
-        
-
 
 def newgame():
     global pause
@@ -230,12 +226,10 @@ def newgame():
     global score
     global body
     global newdirection
-    global thread
+    global loop_thread
     global dead
-
-    if thread.is_alive():
-        killthread(thread.ident,SystemExit)
-    
+    if loop_thread.is_alive():
+        killthread()
     for i in body:
         i.destroy()
     body.clear()
@@ -248,30 +242,31 @@ def newgame():
     dead = False
     showscore.configure(text="0")
     init() #初始化
-    thread = threading.Thread(target=loop) #对于游戏主循环，则需另外开一个线程，否则会卡死主界面
-    thread.start() #开始游戏！
+    loop_thread = threading.Thread(target=loop,args=[stop_event],daemon=True) #对于游戏主循环，则需另外开一个线程，否则会卡死主界面
+    loop_thread.start() #开始游戏！
 
 def about():
     global pause
+    print("About")
     top = tkinter.Toplevel()
     title = tkinter.Label(top,text="贪吃蛇",font=(None,20))
     title.pack()
     content = tkinter.Label(top,text="By Jzwalliser")
     content.pack()
     pause = True
-    top.grab_set()
     def close():
         global pause
         pause = False
         top.destroy()
     top.protocol("WM_DELETE_WINDOW",close)
+    top.grab_set()
     root.wait_window()
-    
 
 def exitgame():
-    if thread.is_alive():
-        killthread(thread.ident,SystemExit)
+    if loop_thread.is_alive():
+        killthread()
     root.destroy()
+    sys.exit()
 
 def init():
     global head
@@ -294,22 +289,12 @@ def pausegame():
 def place(obj,pos): #方便绘制蛇
     obj.place(x=pos[0] * unit,y=pos[1] * unit,height=unit,width=unit)
 
+def killthread():
+    stop_event.set()
+    loop_thread.join()
+    stop_event.clear()
 
-def killthread(tid,exctype): #杀线程的代码来源于：https://tomerfiliba.com/recipes/Thread2
-    try:
-        tid = ctypes.c_long(tid)
-        if not inspect.isclass(exctype):
-            exctype = type(exctype)
-        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
-        if res == 0:
-            raise ValueError("Invalid Thread ID")
-        elif res != 1:
-            ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
-            raise SystemError("PyThreadState_SetAsyncExc failed")
-    except Exception as err:
-        print(err)
-
-def loop():
+def loop(event):
     global head
     global body
     global dead
@@ -319,6 +304,9 @@ def loop():
     global superfoodexist
     global superfood
     while True:
+        if event.is_set():
+            print("Killed")
+            return
         if not dead:
             positions.pop(0) #将蛇尾的坐标删除
             node = body[0] #将蛇尾的按钮出列
@@ -359,7 +347,8 @@ def loop():
             while pause: #如果游戏被暂停,则阻塞线程
                 time.sleep(0.2) #每隔0.2秒检查一次游戏状态
         else:
-            death() #善后
+            root.after(0,death) #善后
+            return
 
 def dealsuperfoodtime():
     global superfoodplacetime
@@ -442,10 +431,11 @@ root.protocol("WM_DELETE_WINDOW",exitgame)
 
 drawnet()
 init() #初始化
-thread = threading.Thread(target=loop) #对于游戏主循环，则需另外开一个线程，否则会卡死主界面
-thread.start() #开始游戏！
-thread = threading.Thread(target=dealsuperfoodtime) #
-thread.start() #
+loop_thread = threading.Thread(target=loop,args=[stop_event],daemon=True) #对于游戏主循环，则需另外开一个线程，否则会卡死主界面
+loop_thread.start() #开始游戏！
+
+food_thread = threading.Thread(target=dealsuperfoodtime,daemon=True) #
+food_thread.start() #
 
 
 
