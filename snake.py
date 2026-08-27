@@ -29,12 +29,45 @@ superfood = (0,0) #超级食物的位置
 body = []
 bodyobj = tkinter.Label
 args = {"bg":"cyan","relief":"solid","borderwidth":1}
+clicked = False
+lastpos = (0,0)
+lasttime = 0
 
+def getk(last,now):
+    try:
+        if -2 < last[1] - now[1] < 2:
+            if last[0] > now[0]:
+                print(0)
+            else:
+                print(1)
+    except:
+        pass
 
+def motion(event):
+    global lastpos
+    global lasttime
+    if time.time() - lasttime >= 0.1:
+        lasttime = time.time()
+        getk(lastpos,(event.x,event.y))
+        lastpos = (event.x,event.y)
+
+def click(event):
+    global clicked
+    global lasttime
+    lasttime = time.time()
+    clicked = True
+
+def release(event):
+    global clicked
+    clicked = False
+    
 root = tkinter.Tk()
 root.title("贪吃蛇")
 frame = tkinter.Canvas(root,relief="sunken",height=size[1] * unit,width=size[0] * unit)
 frame.pack()
+frame.bind("<Motion>",motion)
+frame.bind("<Button-1>",click)
+frame.bind("<ButtonRelease-1>",release)
 dot = tkinter.Label(frame,text="●",fg="red",font=("simsun",int(unit / 1.5))) #食物
 superfooddot = tkinter.Label(frame,text="★",fg="red",font=("simsun",int(unit / 1.5))) #食物
 showscore = tkinter.Label(root,text=0) #用于显示分数
@@ -47,10 +80,38 @@ focuspoint.focus_set() #获取焦点
 
 def right():
     global newdirection
-    newdirection = 2
+    focuspoint.focus_set()
+    if direction != 3:
+        newdirection = 2
 
-rightbutton = tkinter.ttk.Button(root,text=">",command=right)
-rightbutton.pack()
+def left():
+    global newdirection
+    focuspoint.focus_set()
+    if direction != 2:
+        newdirection = 3
+
+def up():
+    global newdirection
+    focuspoint.focus_set()
+    if direction != 1:
+        newdirection = 0
+
+def down():
+    global newdirection
+    focuspoint.focus_set()
+    if direction != 0:
+        newdirection = 1
+
+virtualkeyboard = tkinter.Frame(root,width=200,height=200)
+virtualkeyboard.pack(side=tkinter.LEFT)
+rightbutton = tkinter.ttk.Button(virtualkeyboard,text="→",command=right,width=3)
+rightbutton.grid(row=2,column=2)
+leftbutton = tkinter.ttk.Button(virtualkeyboard,text="←",command=left,width=3)
+leftbutton.grid(row=2,column=0)
+upbutton = tkinter.ttk.Button(virtualkeyboard,text="↑",command=up,width=3)
+upbutton.grid(row=1,column=1)
+downbutton = tkinter.ttk.Button(virtualkeyboard,text="↓",command=down,width=3)
+downbutton.grid(row=3,column=1)
 
 
 
