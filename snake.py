@@ -10,13 +10,13 @@ import inspect
 import math
 import tkinter.colorchooser
 
-size = (50,30) #长*宽
+size = (20,20) #长*宽
 unit = 10 #单位边长
 head = (0,0) #当前蛇头的位置
 direction = 1
 newdirection = 1
 directions = [(0,-1),(0,1),(1,0),(-1,0)] #方向，分别为上、下、左、右
-interval = 0.1 #蛇每移动一步等待时间
+interval = 0.05 #蛇每移动一步等待时间
 positions = [] #蛇身所在位置
 pause = False #标记游戏是否暂停
 score = 0 #分数
@@ -28,6 +28,7 @@ args = {"bg":"cyan","relief":"solid","borderwidth":1}
 
 
 root = tkinter.Tk()
+root.title("贪吃蛇")
 frame = tkinter.Canvas(root,relief="sunken",height=size[1] * unit,width=size[0] * unit)
 frame.pack()
 dot = tkinter.Label(frame,text="●",fg="red") #食物
@@ -42,6 +43,7 @@ def settings():
     global pause
     pause = True
     top = tkinter.Toplevel()
+    top.title("游戏设置")
     top.grab_set()
     def ok():
         global pause
@@ -302,6 +304,8 @@ def changedirection(event): #蛇每移动一步等待时间
     if event.keysym in dictionary.keys():
         if disallow[dictionary[event.keysym]] != direction: #如果没有往回
             newdirection = dictionary[event.keysym] #那么就改变方向
+    elif event.keysym == "space":
+        pausegame()
             
 focuspoint.bind("<Key>",changedirection) #绑定事件
 
